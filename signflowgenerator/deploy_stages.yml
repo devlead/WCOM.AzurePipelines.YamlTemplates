@@ -24,3 +24,4 @@ stages:
               keyVaultName: ${{ format(coalesce(coalesce(environment.keyVaultNameFormat, parameters.keyVaultNameFormat), '{2}-{0}-kv-{1}'), parameters.system, environment.env, parameters.suffix, environment.name) }}
               eventApi: ${{ environment.eventApi }}
               subsriber: ${{ parameters.subsriber }}
+              sources: ${{ parameters.sources }}

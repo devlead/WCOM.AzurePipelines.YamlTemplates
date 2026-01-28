@@ -23,6 +23,7 @@ Azure DevOps Pipelines YAML template used to build, test, pack, and publish .NET
  dpi                 | object    | No           |                   | Settings relating to Dependency reports using DPI tool
  toolRestore         | bool      | No           | false             | Flag to be able to dotnet restore tools before prebuild script in the build pipeline.
  buildEnvironmentVariables | object | No        |                   | Dictionary of environment variables to pass to the build task.
+ container           | object    | No           |                   | Container configuration for containerized deployments.
 
 
 ## Pre-Build
@@ -95,6 +96,45 @@ Azure DevOps Pipelines YAML template used to build, test, pack, and publish .NET
 ----------------|----------|--------------|-------------------|---------------------------------------------
  env            | array    | Yes          |                   | The target environment.
  name           | string   | Yes          |                   | The target environment name.
+
+## Container
+
+ **Parameters**   | **Type** | **Required** | **Default value**                | **Description**
+------------------|----------|--------------|----------------------------------|----------------------------------
+ deploy           | bool     | No           | false                            | Flag to deploy container.
+ csproj           | string   | No           |                                  | Path to the .csproj file for container build. Will trigger container build if specified.
+ repository       | string   | Yes          |                                  | Container repository name.
+ artifact         | string   | No           | repository                       | Name of the container artifact.
+ baseimage        | string   | No           |                                  | Base image for the container.
+ port             | string   | No           | '8080'                           | Port exposed by the container.
+ tag              | string   | No           | $(Build.BuildNumber)             | Tag for the container image.
+ latest           | bool     | No           | true                             | Whether to tag the container as latest.
+ servers          | array    | No           |                                  | Array of server configurations for container deployment.
+
+## Container Servers
+
+ **Parameters**   | **Type** | **Required** | **Default value**                | **Description**
+------------------|----------|--------------|----------------------------------|----------------------------------
+ name             | string   | Yes          |                                  | Name of the server to deploy to.
+ registry         | string   | No           | container.repository             | Container registry to use.
+ username         | string   | Yes          |                                  | Username for registry authentication.
+ password         | string   | Yes          |                                  | Password for registry authentication.
+ environment      | string   | No           | parameters.build                 | Environment to deploy to.
+ latest           | bool     | No           | container.latest                 | Whether to tag the container as latest on this server.
+ deployAfter      | array    | No           |                                  | Array of environment names that must be published before this server deployment. Creates stage dependencies.
+
+## Container Environments
+
+ **Parameters**   | **Type** | **Required** | **Default value**                | **Description**
+------------------|----------|--------------|----------------------------------|----------------------------------
+ name             | string   | Yes          |                                  | Name of the environment. Used for stage name and display name.
+ environment      | string   | Yes          |                                  | Azure DevOps environment name for the deployment.
+ containerAppName | string   | Yes          |                                  | Name of the Azure Container App to update.
+ azureSubscription| string   | Yes          |                                  | Azure Resource Manager subscription for the container app update.
+ resourceGroup    | string   | Yes          |                                  | Resource group containing the container app.
+ sourceServer     | string   | Yes          |                                  | Name of the server (from container.servers) that contains the image to publish. Used to construct the image reference.
+ containerAppArgs | string   | No           |                                  | Additional arguments to pass to the `az containerapp update` command.
+ deployAfter      | array    | No           |                                  | Array of environment names that must be published before this environment. Creates stage dependencies.
 
 ## Examples
 
@@ -221,4 +261,43 @@ stages:
     environments:
       - env: dev
         name: Development
+    container:
+      deploy: true
+      csproj: src/MyProject/MyProject.csproj
+      repository: myproject
+      artifact: myproject-container
+      baseimage: mcr.microsoft.com/dotnet/aspnet:9.0
+      port: 8080
+      tag: $(Build.BuildNumber)
+      latest: true
+      servers:
+        - name: Development
+          registry: myregistry.azurecr.io
+          username: $(RegistryUsername)
+          password: $(RegistryPassword)
+          environment: dev
+          latest: true
+        - name: Production
+          registry: myregistry.azurecr.io
+          username: $(RegistryUsername)
+          password: $(RegistryPassword)
+          environment: prod
+          deployAfter:
+            - Development
+      environments:
+        - name: Development
+          environment: dev
+          containerAppName: myapp-dev
+          azureSubscription: My-Azure-Subscription
+          resourceGroup: myapp-rg
+          sourceServer: Development
+          containerAppArgs: '--cpu 1.0 --memory 2.0Gi'
+        - name: Production
+          environment: prod
+          containerAppName: myapp-prod
+          azureSubscription: My-Azure-Subscription
+          resourceGroup: myapp-rg
+          sourceServer: Production
+          deployAfter:
+            - Development
 ```

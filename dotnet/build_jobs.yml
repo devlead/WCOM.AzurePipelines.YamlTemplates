@@ -54,3 +54,7 @@ jobs:
         targetPath: '$(Build.ArtifactStagingDirectory)/'
         archiveFilePatterns: '**/*.$(Build.BuildNumber).nupkg'
         artifactName: ${{ parameters.artifactNamePrefix }}$(Build.DefinitionName)
+
+    - template: ../container/build_steps.yml
+      parameters: ${{ parameters }}
+

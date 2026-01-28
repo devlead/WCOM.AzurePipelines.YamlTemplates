@@ -3,7 +3,7 @@ stages:
     - ${{ each server in parameters.container.servers }}:
       - stage: ${{ format('Deploy_{0}', replace(replace(replace(server.name, ' ', '_'), '-', '_'), '.', '_')) }}
         displayName: ${{ format('Deploy to {0}', server.name) }}
-        condition: and(succeeded(), ${{ parameters.shouldDeploy }})
+        condition: and(succeeded(), ${{ coalesce(parameters.shouldDeploy, parameters.shouldPublish) }})
         dependsOn:
           - ${{ format('Build_{0}', parameters.build) }}
           - ${{ each after in server.deployAfter }}:
